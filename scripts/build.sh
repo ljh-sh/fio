@@ -105,6 +105,14 @@ CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-pmem --disable-rdma --disable-rados"
 CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-rbd --disable-http --disable-xnvme"
 CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-libblkio --disable-libzbc --disable-isal"
 CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-isal64 --disable-libnfs --disable-tcmalloc"
+# Disable lex/yacc math parser. On macOS cross-compile, the system's
+# prebuilt libl.a is for the host arch, so linking fails with
+# "Undefined symbols for architecture arm64: _yylex". Disabling
+# CONFIG_ARITHMETIC drops the prebuilt libl.a dependency.
+# Trade-off: fio's runtime math expression parser is disabled (no
+# `fio --section --size=$((1<<20))`). The vast majority of fio jobs
+# use plain numeric literals, not math expressions.
+CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-lex"
 
 # Cross-compile / OS hint: tweak CFLAGS / LDFLAGS / --cc so the produced
 # binary is shaped for the target platform rather than the host.
@@ -113,12 +121,20 @@ CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-isal64 --disable-libnfs --disable-tcma
 # default CROSS_COMPILE="${TARGET_ARCH}-linux-gnu-" would point at a
 # non-existent Linux cross-compiler.
 if [ "$TARGET_ARCH" != "$HOST_ARCH" ] || [ -n "$CROSS_COMPILE" ] || [ -n "${FIO_OS_HINT:-}" ]; then
-	case "$HOST_OS" in
-	MINGW*|MSYS*)
+	case "${FIO_OS_HINT:-}:$HOST_OS" in
+	darwin:*)
+		# Darwin host or cross — let configure auto-pick clang via xcrun.
+		# We pass --cpu only; -arch x86_64 lives in CFLAGS env (set below)
+		# so it propagates to both compile + link via clang.
+		CONFIGURE_ARGS="$CONFIGURE_ARGS --cpu=$TARGET_ARCH"
+		;;
+	*:MINGW*|*:MSYS*)
 		# MinGW host — let configure auto-pick x86_64-w64-mingw32-gcc.
 		CONFIGURE_ARGS="$CONFIGURE_ARGS --cpu=$TARGET_ARCH"
 		;;
 	*)
+		# Linux cross-compile (incl. musl). Set CC to the cross gcc so
+		# the produced binary matches the target libc.
 		[ -n "$CROSS_COMPILE" ] || CROSS_COMPILE="${TARGET_ARCH}-linux-gnu-"
 		CONFIGURE_ARGS="$CONFIGURE_ARGS --cpu=$TARGET_ARCH --cc=${CROSS_COMPILE}gcc"
 		;;
@@ -126,13 +142,14 @@ if [ "$TARGET_ARCH" != "$HOST_ARCH" ] || [ -n "$CROSS_COMPILE" ] || [ -n "${FIO_
 	case "${FIO_OS_HINT:-}" in
 	darwin)
 		# Apple SDK is shared between arches; clang auto-discovers via xcrun.
-		# `clang -arch $arch` propagates to the linker, so we don't need a
-		# separate LDFLAGS. (fio's configure has no --extra-ldflags anyway,
-		# and `--extra-cflags=-arch $arch` would split into two shell tokens
-		# if not quoted, so we use the CFLAGS env which configure preserves
-		# verbatim — see configure line 47.)
+		# Both CFLAGS and LDFLAGS need -arch because fio's Makefile passes
+		# them to the linker separately (configure has no --extra-ldflags
+		# to chain them, and `--extra-cflags=-arch x86_64` would split into
+		# two shell tokens). The CFLAGS env var is preserved verbatim by
+		# configure line 47; LDFLAGS isn't touched at all.
 		: "${CFLAGS:=-arch $TARGET_ARCH}"
-		export CFLAGS
+		: "${LDFLAGS:=-arch $TARGET_ARCH}"
+		export CFLAGS LDFLAGS
 		;;
 	windows)
 		# MinGW cross-toolchain (e.g. x86_64-w64-mingw32-gcc from MSYS2).
