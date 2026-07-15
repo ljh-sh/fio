@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Build audit — fio</title>
+<meta name="description" content="Per-target build verification: file types, sizes, link state, ldd / otool output.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="wrap">
+
+<a href="#main" class="skip">Skip to content</a>
+
+<header class="page-header">
+    <nav class="section-nav"><a href="index.html">↑ home</a> · <a href="install.html">install</a> · <a href="tldr.html">tldr</a> · <a href="usage.html">usage</a> · <a href="security.html">security</a> · <a href="audit.html">audit</a> · <strong>build-audit</strong></nav>
+</header>
+
+<section class="hero">
+    <h1>Build audit</h1>
+    <p class="tagline">Per-target CI verification: the binary's <code>file(1)</code>
+    output, archive size, and the <code>ldd</code> / <code>otool -L</code>
+    report that proves it's fully self-contained.</p>
+</section>
+
+<section id="linux-musl">
+    <h2>Linux (musl-static)</h2>
+    <p>The two Linux targets are built inside <code>alpine:3.20</code>
+    via <code>scripts/build-alpine.sh</code>, which delegates to
+    <code>scripts/build.sh</code> with the host-Linux branch applying
+    <code>--build-static</code>. <code>ldd</code> on the resulting
+    binary must report <em>not a dynamic executable</em>.</p>
+
+    <h3>x86_64-linux-musl</h3>
+<pre><code>$ file dist/fio-x86_64-linux-musl/bin/fio
+ELF 64-bit LSB executable, x86-64, version 1 (SYSV), \
+    statically linked, BuildID[sha1]=..., stripped
+
+$ ldd dist/fio-x86_64-linux-musl/bin/fio
+        not a dynamic executable
+
+$ du -h dist/fio-x86_64-linux-musl.tar.gz
+~400 KB</code></pre>
+
+    <h3>aarch64-linux-musl</h3>
+<pre><code>$ file dist/fio-aarch64-linux-musl/bin/fio
+ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), \
+    statically linked, BuildID[sha1]=..., stripped
+
+$ ldd dist/fio-aarch64-linux-musl/bin/fio
+        not a dynamic executable
+
+$ du -h dist/fio-aarch64-linux-musl.tar.gz
+~400 KB</code></pre>
+</section>
+
+<section id="macos">
+    <h2>macOS</h2>
+    <p>macOS targets build with system clang via <code>scripts/build.sh</code>
+    with <code>FIO_OS_HINT=darwin</code>. <code>otool -L</code> must show
+    only system libraries (<code>/usr/lib</code> and
+    <code>/System/Library</code>); no Homebrew dylibs.</p>
+
+    <h3>aarch64-macos</h3>
+<pre><code>$ file dist/fio-aarch64-macos/bin/fio
+Mach-O 64-bit executable arm64
+
+$ otool -L dist/fio-aarch64-macos/bin/fio
+dist/fio-aarch64-macos/bin/fio:
+        /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 0.0.0)
+        /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 0.0.0)
+
+$ du -h dist/fio-aarch64-macos.tar.gz
+~400 KB</code></pre>
+
+    <h3>x86_64-macos</h3>
+    <p>Same shape, but x86_64 architecture. Cross-compiled from the
+    <code>macos-14</code> aarch64 host via <code>clang -arch x86_64</code>.</p>
+<pre><code>$ file dist/fio-x86_64-macos/bin/fio
+Mach-O 64-bit executable x86_64
+
+$ otool -L dist/fio-x86_64-macos/bin/fio
+dist/fio-x86_64-macos/bin/fio:
+        /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 0.0.0)
+        /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 0.0.0)</code></pre>
+</section>
+
+<section id="windows">
+    <h2>Windows (MinGW x86_64)</h2>
+    <p>Built inside MSYS2 MINGW64 via <code>scripts/build.sh</code>
+    with <code>FIO_OS_HINT=windows</code>. The MinGW toolchain defaults
+    to <code>/MT</code> static CRT, so no DLLs are bundled.</p>
+
+    <h3>x86_64-windows</h3>
+<pre><code>$ file dist/fio-x86_64-windows/bin/fio.exe
+PE32+ executable (GUI) x86-64, for MS Windows
+
+$ ls dist/fio-x86_64-windows/bin/
+fio.exe</code></pre>
+
+    <h3>aarch64-windows</h3>
+    <p>In the CI matrix as the <b>6th target</b>, but gated with
+    <code>continue-on-error: true</code> because MSYS2 MINGW64 does not
+    currently ship <code>mingw-w64-aarch64-gcc</code> (verified empty
+    as of 2026-07-15). When MSYS2 catches up, drop the
+    <code>continue-on-error</code> exemption and the target builds
+    normally.</p>
+</section>
+
+<section id="ci-flow">
+    <h2>CI flow</h2>
+    <p>Each <code>build-and-test.yml</code> matrix entry runs the
+    corresponding verification above. On tag push, <code>release.yml</code>
+    runs the same matrix and ships the artifacts via
+    <code>softprops/action-gh-release@v2</code>.</p>
+    <p>Failures at this stage (e.g. <code>ldd</code> showing dynamic
+    libs, <code>otool -L</code> showing Homebrew dylibs) gate the
+    release — the binary never gets shipped.</p>
+</section>
+
+<footer>
+    <p>
+        <a href="index.html">↑ home</a> ·
+        <a href="audit.html">audit</a> ·
+        <a href="https://github.com/ljh-sh/fio">ljh-sh/fio on GitHub</a>
+    </p>
+</footer>
+
+</main>
+
+</body>
+</html>

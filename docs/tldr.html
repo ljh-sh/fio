@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TL;DR — fio</title>
+<meta name="description" content="Quick reference: the 8 most useful fio invocations, copy-pasteable.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="wrap">
+
+<a href="#main" class="skip">Skip to content</a>
+
+<header class="page-header">
+    <nav class="section-nav"><a href="index.html">↑ home</a> · <a href="install.html">install</a> · <strong>tldr</strong> · <a href="usage.html">usage</a> · <a href="security.html">security</a> · <a href="audit.html">audit</a> · <a href="build-audit.html">build-audit</a></nav>
+</header>
+
+
+<section class="hero">
+    <h1>TL;DR</h1>
+    <p class="tagline">The 8 most useful <code>fio</code> invocations.
+    Copy-pasteable. If you remember nothing else, remember the first one.</p>
+</section>
+
+<section id="basic">
+    <h2>The essentials</h2>
+
+<pre><code><b># Sequential read of a 1 GiB file (writes nothing; pre-existing file needed)</b>
+$ fio --name=read --rw=read --size=1G --filename=/tmp/test.bin
+</code></pre>
+
+<pre><code><b>Random 4 KiB write benchmark (4 parallel jobs, 1 GiB each)</b>
+$ fio --rw=randwrite --bs=4k --size=1G --numjobs=4 \
+      --filename=/tmp/fio-test.bin --runtime=60 --time_based
+</code></pre>
+</section>
+
+<section id="engines">
+    <h2>IO engines</h2>
+
+<pre><code><b>Linux io_uring engine (kernel ≥ 5.6; lowest-latency async path)</b>
+$ fio --ioengine=io_uring --rw=randrw --bs=4k \
+      --size=1G --filename=/dev/nvme0n1 --runtime=30 --time_based
+</code></pre>
+
+<pre><code><b>Sanity check the binary without touching disk (null engine; useful in CI)</b>
+$ fio --name=smoke --ioengine=null --rw=randrw \
+      --runtime=1 --time_based --size=1M --minimal
+3;fio-3.41;smoke;0;0;17175736;17158577;4289644;1001;...
+</code></pre>
+</section>
+
+<section id="output">
+    <h2>Output &amp; reporting</h2>
+
+<pre><code><b>Latency histogram + percentile breakdown (stdout, terse format)</b>
+$ fio --rw=randread --bs=4k --size=1G --filename=/dev/nvme0n1 \
+      --runtime=30 --time_based --output-format=normal,latency
+</code></pre>
+
+<pre><code><b>JSON output for downstream parsing (e.g. dashboards, regression tests)</b>
+$ fio --rw=randwrite --bs=4k --size=1G --filename=/tmp/test.bin \
+      --output-format=json --output=out.json
+$ jq '.jobs[0].write.iops' out.json
+52319.4
+</code></pre>
+</section>
+
+<section id="advanced">
+    <h2>Advanced</h2>
+
+<pre><code><b>Multi-device striping (split the workload across two block devices)</b>
+$ fio --rw=randrw --bs=4k --size=2G \
+      --filename=/dev/nvme0n1 --filename=/dev/nvme1n1 \
+      --numjobs=2
+</code></pre>
+</section>
+
+<section id="when-not">
+    <h2>When NOT to use <code>fio</code></h2>
+    <p>
+        fio is a <i>benchmark</i> tool — it generates synthetic workloads
+        and reports throughput / latency. If you want a single-shot
+        <code>dd</code>-style sequential write, or a one-line disk speed
+        number, fio is overkill. For those:
+    </p>
+    <ul>
+        <li><code>dd if=/dev/zero of=/tmp/test bs=1M count=1024 oflag=direct</code> — fast sequential write</li>
+        <li><a href="https://github.com/akopytov/sysbench"><code>sysbench fileio</code></a> — simpler OLTP-style benchmarks</li>
+        <li><a href="https://www.coker.com.au/bonnie++/"><code>bonnie++</code></a> — classic FS-level benchmark</li>
+    </ul>
+    <p>
+        And if you need reproducible synthetic workloads at scale (CI / regression),
+        use <code>--minimal --output-format=json</code> and parse the JSON —
+        that's the test-driven fio workflow.
+    </p>
+</section>
+
+<footer>
+    <p>
+        <a href="index.html">↑ home</a> ·
+        <a href="install.html">install</a> ·
+        <a href="usage.html">usage</a> ·
+        <a href="https://github.com/ljh-sh/fio">ljh-sh/fio on GitHub</a>
+    </p>
+</footer>
+
+</main>
+
+</body>
+</html>

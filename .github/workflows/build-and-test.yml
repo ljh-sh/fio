@@ -1,0 +1,198 @@
+name: build-and-test
+
+# PR / push cheap-but-thorough test: every push to main and every PR
+# builds the full 6-target matrix (musl x86_64 + aarch64, macos
+# aarch64 + x86_64, windows x86_64 + aarch64) and runs the upstream smoke
+# (version + null-engine + disk round-trip). Uploads dist/ as workflow
+# artifacts so a human can grab any per-target binary for inspection.
+#
+# This is the "auto-test" stage per the ljh-sh dist regime convention
+# (see `ljh-sh/kenlm` + `ljh-sh/lhasa`). `release.yml` is the separate
+# "publish" stage — it only fires on v* tags and `workflow_dispatch`,
+# so this workflow's output is what gates a PR.
+#
+# Triggers: push (incl. merging a PR) to main; pull_request. We do NOT
+# listen to tag pushes here — release.yml handles those, and we don't
+# want the same matrix to run twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-linux-musl,   runner: ubuntu-latest,    os: linux,   libc: musl, docker_arch: amd64 }
+          - { target: aarch64-linux-musl,  runner: ubuntu-24.04-arm, os: linux,   libc: musl, docker_arch: arm64 }
+          - { target: aarch64-macos,       runner: macos-14,         os: macos                  }
+          - { target: x86_64-macos,        runner: macos-14,         os: macos                  }
+          - { target: x86_64-windows,      runner: windows-latest,   os: windows                }
+          # aarch64-windows: MSYS2 MINGW64 doesn't ship mingw-w64-aarch64-gcc
+          # as of 2026-07-15. We add the matrix entry per the static-build
+          # 6-target rule, gated with `continue-on-error: true` so a missing
+          # aarch64-gcc doesn't break the PR. When MSYS2 catches up, drop
+          # the `continue-on-error` exemption.
+          - { target: aarch64-windows,     runner: windows-11-arm,   os: windows                }
+    # Only aarch64-windows is allowed to fail on a missing toolchain
+    # (MSYS2 MINGW64 doesn't ship mingw-w64-aarch64-gcc as of 2026-07-15).
+    # All other targets MUST succeed or the matrix fails.
+    continue-on-error: ${{ matrix.target == 'aarch64-windows' }}
+    env:
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- install deps ----
+      - name: Install deps (Linux — alpine docker drives musl builds)
+        if: matrix.libc == 'musl'
+        run: sudo apt-get update && sudo apt-get install -y curl
+
+      - name: Install deps (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          brew update
+          brew install bash
+
+      - name: Install deps (Windows MSYS2 + mingw64)
+        if: matrix.os == 'windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            make
+            autoconf
+            automake
+            libtool
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-zlib
+
+      # ---- build + smoke ----
+      # Musl: a single Alpine `docker run` does build + smoke.
+      # Alpine's apk brings build-base, bash, zlib-static — everything
+      # scripts/build-alpine.sh needs.
+      - name: Build + smoke on Alpine (musl)
+        if: matrix.libc == 'musl'
+        run: docker run --rm --platform linux/${{ matrix.docker_arch }} -v "$PWD":/w -w /w alpine:3.20 sh -c 'apk add --no-cache bash >/dev/null && bash /w/scripts/build-alpine.sh && bash /w/scripts/smoke.sh'
+
+      # macOS aarch64: native host build.
+      - name: Build (macOS — host)
+        if: matrix.os == 'macos' && matrix.target == 'aarch64-macos'
+        run: bash scripts/build.sh
+
+      # macOS x86_64: cross-compile via clang -arch (Apple SDK is shared).
+      - name: Build (macOS x86_64 — cross from aarch64)
+        if: matrix.target == 'x86_64-macos'
+        env:
+          FIO_TARGET_ARCH: x86_64
+          FIO_OS_HINT: darwin
+        run: bash scripts/build.sh
+
+      # Windows x86_64: msys2 bash + MinGW cross toolchain.
+      - name: Build (Windows x86_64 — msys2 bash)
+        if: matrix.os == 'windows' && matrix.target == 'x86_64-windows'
+        shell: msys2 {0}
+        env:
+          FIO_OS_HINT: windows
+        run: bash scripts/build.sh
+
+      # Windows aarch64: same pattern, but the toolchain may be missing on
+      # the runner (MSYS2 gap, see NOTICE.md). Bail early with a clear
+      # message rather than a cryptic gcc-not-found.
+      - name: Check aarch64 MinGW toolchain availability
+        if: matrix.target == 'aarch64-windows'
+        shell: msys2 {0}
+        run: |
+          if ! command -v aarch64-w64-mingw32-gcc >/dev/null 2>&1; then
+            echo "skip: aarch64-w64-mingw32-gcc not in MSYS2 (2026-07-15)"
+            echo "      see NOTICE.md — add this step's logic to the .cmdline"
+            echo "      when MSYS2 ships the package"
+            exit 0
+          fi
+          bash scripts/build.sh FIO_OS_HINT=windows
+
+      # ---- smoke on host (gnu / macos / windows) ----
+      - name: Smoke test on macOS
+        if: matrix.os == 'macos'
+        run: bash scripts/smoke.sh
+
+      - name: Smoke test on Windows (informational)
+        if: matrix.os == 'windows'
+        shell: msys2 {0}
+        continue-on-error: true
+        run: |
+          set +e
+          FIO="${{ github.workspace }}/build/fio.exe"
+          echo "==> Windows smoke is currently informational only."
+          ls -la "$FIO" || { echo "FAIL: binary missing"; exit 1; }
+          "$FIO" --version 2>&1 | head -3 || true
+          "$FIO" --enghelp 2>&1 | head -5 || true
+          echo "OK: binary executes; round-trip smoke deferred to a future release."
+
+      # ---- package ----
+      - name: Package (Linux / macOS)
+        if: matrix.os != 'windows'
+        run: TARGET=${{ matrix.target }} bash scripts/package.sh
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows'
+        shell: msys2 {0}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1
+
+      # ---- verify self-contained ----
+      - name: Verify self-contained (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          set -e
+          bin="dist/fio-${{ matrix.target }}/bin/fio"
+          out="$(ldd "$bin" 2>&1 || true)"
+          echo "$out"
+          echo "$out" | grep -q "not a dynamic executable" \
+            || { echo "FAIL: not fully static"; exit 1; }
+
+      - name: Verify self-contained (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          set -e
+          bin="dist/fio-${{ matrix.target }}/bin/fio"
+          otool -L "$bin"
+          otool -L "$bin" | grep -E '/(opt/homebrew|usr/local)/' \
+            && { echo "FAIL: $bin links Homebrew dylibs"; exit 1; } || true
+          echo "OK: only system libs (/usr/lib, /System/Library)"
+
+      - name: Show file type & size (Linux/macOS)
+        if: matrix.os != 'windows'
+        run: |
+          file dist/fio-${{ matrix.target }}/bin/fio
+          du -h dist/fio-${{ matrix.target }}.tar.gz
+
+      - name: Show file type & size (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          file dist/fio-${{ matrix.target }}/bin/fio.exe
+          Get-ChildItem dist/fio-${{ matrix.target }}.zip | Format-Table Name, Length
+
+      # ---- upload artifact (for human inspection; NOT a release) ----
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fio-test-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7

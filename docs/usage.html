@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage — fio</title>
+<meta name="description" content="Common fio usage patterns: jobs, engines, output formats, latency reporting.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="wrap">
+
+<a href="#main" class="skip">Skip to content</a>
+
+<header class="page-header">
+    <nav class="section-nav"><a href="index.html">↑ home</a> · <a href="install.html">install</a> · <a href="tldr.html">tldr</a> · <strong>usage</strong> · <a href="security.html">security</a> · <a href="audit.html">audit</a> · <a href="build-audit.html">build-audit</a></nav>
+</header>
+
+<section class="hero">
+    <h1>Usage</h1>
+    <p class="tagline">Common fio invocations, organized by what you're trying to learn.</p>
+</section>
+
+<section id="engines">
+    <h2>IO engines</h2>
+    <p>fio ships with many engines. The ones built into our binaries:</p>
+    <table>
+        <thead><tr><th>engine</th><th>purpose</th></tr></thead>
+        <tbody>
+            <tr><td><code>psync</code></td><td>synchronous <code>pread/pwrite</code> (default)</td></tr>
+            <tr><td><code>vsync</code></td><td>synchronous <code>readv/writev</code></td></tr>
+            <tr><td><code>pvsync</code></td><td>synchronous <code>preadv/pwritev</code></td></tr>
+            <tr><td><code>pvsync2</code></td><td>preadv2/pwritev2 with flags</td></tr>
+            <tr><td><code>io_uring</code></td><td>Linux io_uring (kernel ≥ 5.6; lowest-latency async)</td></tr>
+            <tr><td><code>mmap</code></td><td><code>mmap</code>-based file IO</td></tr>
+            <tr><td><code>null</code></td><td>no-op (CPU-only, useful for testing)</td></tr>
+            <tr><td><code>cpu</code></td><td>CPU-bound workload simulation</td></tr>
+            <tr><td><code>net</code></td><td>network IO (via sendfile etc.)</td></tr>
+            <tr><td><code>exec</code></td><td>spawn external processes per IO</td></tr>
+            <tr><td><code>fileoperations</code></td><td>filecreate / filestat / filedelete / etc.</td></tr>
+        </tbody>
+    </table>
+    <p>Use <code>--ioengine=NAME</code> to switch. Optional engines
+    (libaio, libpmem, librbd, libcurl, libibverbs, …) require external
+    libraries — see <a href="#caveats">caveats below</a>.</p>
+</section>
+
+<section id="output">
+    <h2>Output formats</h2>
+    <table>
+        <thead><tr><th>flag</th><th>format</th><th>when</th></tr></thead>
+        <tbody>
+            <tr><td>(default)</td><td>human-readable plain text</td><td>interactive use</td></tr>
+            <tr><td><code>--minimal</code></td><td>single semicolon-separated line per job</td><td>shell parsing</td></tr>
+            <tr><td><code>--output-format=json</code></td><td>JSON document</td><td>programmatic parsing</td></tr>
+            <tr><td><code>--output-format=json+</code></td><td>JSON with all per-IO samples</td><td>deep analysis (large output)</td></tr>
+            <tr><td><code>--output-format=normal,latency</code></td><td>human + latency histogram</td><td>latency debugging</td></tr>
+            <tr><td><code>--output=FILE</code></td><td>write to FILE instead of stdout</td><td>log capture</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section id="jobfiles">
+    <h2>Job files</h2>
+    <p>For complex or repeated workloads, write a job file and pass it as
+    the argument:</p>
+
+<pre><code><b># bench-randwrite.fio</b>
+[global]
+filename=/tmp/fio-test.bin
+size=1G
+bs=4k
+rw=randwrite
+ioengine=io_uring
+runtime=60
+time_based=1
+group_reporting=1
+numjobs=4
+
+[job1]
+stonewall
+</code></pre>
+
+<pre><code>$ fio bench-randwrite.fio
+</code></pre>
+
+    <p>Multiple sections can share <code>[global]</code> settings and run
+    in parallel or sequence (<code>stonewall</code> = sequential).</p>
+</section>
+
+<section id="rate">
+    <h2>Rate limiting &amp; latency targets</h2>
+    <p>Constrain fio to a specific throughput target to test "is my
+    device meeting SLA" rather than "what's the max IOPS":</p>
+
+<pre><code><b># 10k read IOPS, 50/90/99 latency percentiles</b>
+$ fio --rw=randread --bs=4k --size=10G --filename=/dev/nvme0n1 \
+      --rate_iops=10000 \
+      --percentile_list=50:90:99:99.9:99.99 \
+      --output-format=normal,latency
+</code></pre>
+</section>
+
+<section id="caveats">
+    <h2>Caveats</h2>
+    <ul>
+        <li><b>Optional engines disabled.</b> Our static build disables
+        <code>libaio</code>, <code>libpmem</code>, <code>librbd</code>,
+        <code>libcurl+openssl</code>, <code>libibverbs</code>, etc. for
+        portability (see <a href="audit.html">audit</a> #5). If you need
+        <code>libaio</code>, build fio yourself with
+        <code>./configure</code> omitting the <code>--disable-libaio</code>
+        flag.</li>
+        <li><b>Self-contained = no external config files.</b> The static
+        binary doesn't read <code>/etc/fio/</code> or <code>~/.fio</code>
+        by default; pass <code>--debug=io</code> to see where it looks.</li>
+        <li><b>Operator-owned filenames.</b> fio does NOT sandbox
+        <code>--filename=</code>; the operator must vet job files from
+        untrusted sources. See <a href="security.html">security</a>.</li>
+    </ul>
+</section>
+
+<footer>
+    <p>
+        <a href="index.html">↑ home</a> ·
+        <a href="tldr.html">tldr</a> ·
+        <a href="install.html">install</a> ·
+        <a href="https://github.com/ljh-sh/fio">ljh-sh/fio on GitHub</a>
+    </p>
+</footer>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+# Build artifacts
+build/
+dist/
+
+# Vendored build residue (regenerated on every build; never committed)
+upstream/fio/config-host.mak
+upstream/fio/config-host.h
+upstream/fio/config.log
+upstream/fio/FIO-VERSION-FILE
+upstream/fio/version
+upstream/fio/fio
+upstream/fio/fio.exe
+upstream/fio/*.o
+upstream/fio/**/*.o
+upstream/fio/t/fio-*
+upstream/fio/lex.yy.*
+upstream/fio/y.tab.*
+upstream/fio/.depend
+upstream/fio/cscope.out
+
+# Smoke-test artifacts (fio's --do_verify writes a *.verify.state file)
+*.verify.state
+
+# macOS noise
+.DS_Store
+
+# Editor backups
+*.swp
+*.swo
+*~

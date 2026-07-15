@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>fio — self-contained multi-platform static builds</title>
+<meta name="description" content="fio: flexible I/O tester. Self-contained static binaries for Linux (musl), macOS, Windows.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="wrap">
+
+<a href="#main" class="skip">Skip to content</a>
+
+<section class="hero">
+    <h1>fio</h1>
+    <p class="tagline"><b>Self-contained static binaries</b> of the
+    world's most flexible I/O benchmark — download, run, done.</p>
+    <p class="byline">
+        fio is an open-source project written by
+        <a href="https://github.com/axboe"><b>Jens Axboe</b></a>
+        (original repo <a href="https://github.com/axboe/fio">axboe/fio</a>, 2005).
+        <b>This site distributes pre-built static binaries</b> of fio for
+        every major platform. We don't maintain fio &mdash; we just build it.
+    </p>
+    <p>
+        <a class="cta" href="#download" id="cta-main">Download for your platform</a>
+        <a class="cta secondary" href="tldr.html">Quick reference</a>
+    </p>
+    <p class="cpu-note"><b>CPU-friendly</b> &middot; null-engine smoke works on every host &middot;
+    no GPU is ever required</p>
+    <p class="meta">
+        Latest: <code>v0.1.0</code> &middot;
+        <a href="https://github.com/axboe/fio">fio @ axboe</a>
+    </p>
+</section>
+
+<section id="about">
+    <h2>About this site (credits)</h2>
+    <div class="callout">
+        <p><b>fio</b> is an open-source flexible I/O benchmark written by
+        <a href="https://github.com/axboe"><b>Jens Axboe</b></a>
+        (first released 2005; maintained continuously since).
+        Its canonical home is <code>github.com/axboe/fio</code>; that's
+        where fio is <b>developed, maintained, and bug-fixed</b>.</p>
+        <p>This site &mdash;
+        <a href="https://github.com/ljh-sh/fio"><code>github.com/ljh-sh/fio</code></a>
+        &mdash; is <b>only a static-build distribution</b>. We don't own,
+        rebrand, or maintain fio; we just compile it as fully
+        self-contained static binaries for every major platform so you
+        can download and use it without a toolchain.</p>
+        <p>For questions, bug reports, and contributions &rarr;
+        please go to the
+        <a href="https://github.com/axboe/fio"><b>upstream project</b></a>.</p>
+    </div>
+</section>
+
+<section id="download">
+    <h2>Download v0.1.0</h2>
+    <p>Every archive is a <b>fully self-contained, statically-linked</b> binary.
+    No system libraries to install. Works on any Linux distro (Alpine,
+    Debian, Ubuntu, RHEL, Arch…), macOS, or Windows.</p>
+    <p><span id="detect-line" class="callout">Detecting your platform…</span></p>
+
+    <div class="platforms" id="platforms">
+        <div class="platform" data-target="x86_64-linux-musl">
+            <span class="badge">linux · x86_64 · musl</span>
+            <div class="name">fio-x86_64-linux-musl.tar.gz</div>
+            <div class="hint">~1.5 MiB &middot; Alpine-native, runs on every Linux</div>
+            <a class="download" href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-linux-musl.tar.gz">Download .tar.gz</a> &middot;
+            <a href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-linux-musl.tar.gz.sha256">sha256</a>
+        </div>
+        <div class="platform" data-target="aarch64-linux-musl">
+            <span class="badge">linux · aarch64 · musl</span>
+            <div class="name">fio-aarch64-linux-musl.tar.gz</div>
+            <div class="hint">~1.5 MiB &middot; ARM64 Linux, fully static</div>
+            <a class="download" href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-aarch64-linux-musl.tar.gz">Download .tar.gz</a> &middot;
+            <a href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-aarch64-linux-musl.tar.gz.sha256">sha256</a>
+        </div>
+        <div class="platform" data-target="aarch64-macos">
+            <span class="badge">macos · Apple Silicon</span>
+            <div class="name">fio-aarch64-macos.tar.gz</div>
+            <div class="hint">~1.5 MiB &middot; macOS 11+</div>
+            <a class="download" href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-aarch64-macos.tar.gz">Download .tar.gz</a> &middot;
+            <a href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-aarch64-macos.tar.gz.sha256">sha256</a>
+        </div>
+        <div class="platform" data-target="x86_64-macos">
+            <span class="badge">macos · Intel</span>
+            <div class="name">fio-x86_64-macos.tar.gz</div>
+            <div class="hint">~1.5 MiB &middot; macOS 10.15+</div>
+            <a class="download" href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-macos.tar.gz">Download .tar.gz</a> &middot;
+            <a href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-macos.tar.gz.sha256">sha256</a>
+        </div>
+        <div class="platform" data-target="x86_64-windows">
+            <span class="badge">windows · x86_64</span>
+            <div class="name">fio-x86_64-windows.zip</div>
+            <div class="hint">~1.6 MiB &middot; Windows 10+</div>
+            <a class="download" href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-windows.zip">Download .zip</a> &middot;
+            <a href="https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-windows.zip.sha256">sha256</a>
+        </div>
+    </div>
+
+    <p>Verify after download:</p>
+<pre><code>$ sha256sum -c fio-x86_64-linux-musl.tar.gz.sha256
+fio-x86_64-linux-musl.tar.gz: OK</code></pre>
+
+    <p>And confirm self-containedness:</p>
+<pre><code>$ tar xzf fio-x86_64-linux-musl.tar.gz
+$ ldd fio-x86_64-linux-musl/bin/fio
+        not a dynamic executable        # ← fully static, zero deps</code></pre>
+</section>
+
+<section id="quick">
+    <h2>Quick check after install</h2>
+<pre><code>$ fio --version
+fio-3.41
+
+$ fio --ioengine=null --rw=randrw --runtime=1 --time_based --size=1M --minimal
+3;fio-3.41;smoke;0;0;17175736;17158577;4289644;1001;...
+# ↑ a non-zero IOPS column and runtime ≈ 1001 ms means the binary works.
+# This runs entirely in CPU — no disk I/O — and works on every host.</code></pre>
+</section>
+
+<section id="install">
+    <h2>Install</h2>
+    <p>See <a href="install.html">install.html</a> for <code>x eget</code>, curl+tar, and manual install instructions.</p>
+</section>
+
+<section id="nav-footer">
+    <h2>More</h2>
+    <ul>
+        <li><a href="install.html">Install</a> &mdash; one-liner, manual, Windows</li>
+        <li><a href="tldr.html">TL;DR</a> &mdash; the 8 most useful invocations</li>
+        <li><a href="usage.html">Usage</a> &mdash; common profiles + when-to-use-what</li>
+        <li><a href="security.html">Security</a> &mdash; reporting + trust model</li>
+        <li><a href="audit.html">Audit</a> &mdash; source-level review for each release</li>
+        <li><a href="build-audit.html">Build audit</a> &mdash; per-target CI verification</li>
+    </ul>
+</section>
+
+<footer>
+    <p>
+        <a href="https://github.com/ljh-sh/fio">ljh-sh/fio on GitHub</a> ·
+        <a href="https://github.com/axboe/fio">upstream axboe/fio</a>
+    </p>
+</footer>
+
+</main>
+
+<script>
+(() => {
+    // Mark your platform if the URL fragment or UA matches a known target.
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const plat = (navigator.platform || '').toLowerCase();
+    let detected = null;
+    if (ua.includes('linux') && (plat.includes('x86_64') || plat.includes('amd64'))) detected = 'x86_64-linux-musl';
+    else if (ua.includes('linux') && plat.includes('aarch64')) detected = 'aarch64-linux-musl';
+    else if (ua.includes('mac') && (plat.includes('arm') || ua.includes('aarch64'))) detected = 'aarch64-macos';
+    else if (ua.includes('mac') && plat.includes('x86')) detected = 'x86_64-macos';
+    else if (ua.includes('windows') || plat.includes('win32')) detected = 'x86_64-windows';
+    const line = document.getElementById('detect-line');
+    if (detected) {
+        const name = detected.replace(/-/g, ' · ');
+        line.innerHTML = `Detected <b>${name}</b> — your download is highlighted below.`;
+    } else {
+        line.innerHTML = `Couldn't auto-detect — pick your platform from the list below.`;
+    }
+    if (detected) {
+        const el = document.querySelector(`[data-target="${detected}"]`);
+        if (el) {
+            el.style.borderColor = 'var(--accent-strong)';
+            el.style.boxShadow = '0 0 0 1px var(--accent-strong)';
+        }
+    }
+})();
+</script>
+
+</body>
+</html>

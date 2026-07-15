@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Install — fio</title>
+<meta name="description" content="Three ways to install ljh-sh/fio: x eget, curl+tar, manual.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="wrap">
+
+<a href="#main" class="skip">Skip to content</a>
+
+<header class="page-header">
+    <nav class="section-nav"><a href="index.html">↑ home</a> · <strong>install</strong> · <a href="tldr.html">tldr</a> · <a href="usage.html">usage</a> · <a href="security.html">security</a> · <a href="audit.html">audit</a> · <a href="build-audit.html">build-audit</a></nav>
+</header>
+
+<section class="hero">
+    <h1>Install</h1>
+    <p class="tagline">Three install paths. Pick the one that fits.</p>
+</section>
+
+<section id="eget">
+    <h2>Option 1 — <code>x eget</code> (canonical)</h2>
+    <p>The fastest cross-platform install. x-cmd's <code>eget</code> detects
+    your platform, downloads the matching archive from the latest GitHub
+    Release, verifies the SHA256 against the per-archive <code>.sha256</code>
+    sibling file, extracts to a per-project subdir under
+    <code>~/.local/share/ljh-sh/&lt;project&gt;/</code>, and symlinks the binary
+    into <code>~/.local/bin</code>.</p>
+
+<pre><code>$ x eget ljh-sh/fio
+# ↓ detaches your platform, downloads, verifies, installs
+$ fio --version
+fio-3.41
+
+$ which fio
+~/.local/bin/fio</code></pre>
+
+    <p>The <code>~/.local/bin</code> directory is on <code>$PATH</code> if
+    x-cmd is loaded (most shells auto-add it). See
+    <a href="https://x-cmd.com/install">x-cmd install</a>.</p>
+</section>
+
+<section id="curl">
+    <h2>Option 2 — <code>curl</code> + <code>tar</code> + manual install</h2>
+    <p>Pick your platform from the <a href="index.html#download">download</a>
+    table, then:</p>
+
+    <h3>Linux (x86_64 or aarch64)</h3>
+<pre><code># Download (replace arch with x86_64-linux-musl or aarch64-linux-musl)
+curl -L -O https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-linux-musl.tar.gz
+curl -L -O https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-linux-musl.tar.gz.sha256
+
+# Verify
+sha256sum -c fio-x86_64-linux-musl.tar.gz.sha256
+# fio-x86_64-linux-musl.tar.gz: OK
+
+# Extract + install
+tar xzf fio-x86_64-linux-musl.tar.gz
+sudo install -m 0755 fio-x86_64-linux-musl/bin/fio /usr/local/bin/fio
+sudo install -m 0644 fio-x86_64-linux-musl/man/man1/fio.1 /usr/local/share/man/man1/
+
+# Verify
+fio --version       # fio-3.41
+ldd $(which fio)    # "not a dynamic executable" — fully static</code></pre>
+
+    <h3>macOS (aarch64 or x86_64)</h3>
+<pre><code>curl -L -O https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-aarch64-macos.tar.gz
+curl -L -O https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-aarch64-macos.tar.gz.sha256
+shasum -a 256 -c fio-aarch64-macos.tar.gz.sha256
+tar xzf fio-aarch64-macos.tar.gz
+sudo install -m 0755 fio-aarch64-macos/bin/fio /usr/local/bin/fio
+sudo install -m 0644 fio-aarch64-macos/man/man1/fio.1 /usr/local/share/man/man1/
+fio --version       # fio-3.41</code></pre>
+
+    <h3>Windows (x86_64)</h3>
+<pre><code># In PowerShell
+Invoke-WebRequest -Uri "https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-windows.zip" -OutFile "fio-x86_64-windows.zip"
+Invoke-WebRequest -Uri "https://github.com/ljh-sh/fio/releases/download/v0.1.0/fio-x86_64-windows.zip.sha256" -OutFile "fio-x86_64-windows.zip.sha256"
+
+# Verify
+$h = (Get-FileHash -Algorithm SHA256 -Path "fio-x86_64-windows.zip").Hash.ToLower()
+$expected = (Get-Content "fio-x86_64-windows.zip.sha256" -Raw).Split()[0]
+if ($h -eq $expected) { "OK" } else { "MISMATCH" }
+
+# Extract
+Expand-Archive -Path "fio-x86_64-windows.zip" -DestinationPath "."
+
+# Move fio.exe onto PATH (one option)
+$env:PATH = "$PWD\fio-x86_64-windows\bin;$env:PATH"
+fio --version       # fio-3.41</code></pre>
+
+</section>
+
+<section id="manual">
+    <h2>Option 3 — Build from source</h2>
+    <p>You only need this if you want a custom build (different engine
+    set, different toolchain, etc.).</p>
+
+<pre><code>git clone https://github.com/ljh-sh/fio.git
+cd fio
+bash scripts/build.sh         # native build (Linux/macOS)
+bash scripts/smoke.sh          # version + null + disk round-trip
+
+# For musl-static Linux:
+docker run --rm -v "$PWD":/w -w /w alpine:3.20 \
+    sh -c 'apk add --no-cache bash >/dev/null \
+        && bash /w/scripts/build-alpine.sh && bash /w/scripts/smoke.sh'</code></pre>
+
+    <p>See <a href="https://github.com/ljh-sh/fio/blob/main/scripts/build.sh"><code>scripts/build.sh</code></a>
+    for the canonical build recipe and what knobs it accepts.</p>
+</section>
+
+<footer>
+    <p>
+        <a href="index.html">↑ home</a> ·
+        <a href="tldr.html">tldr</a> ·
+        <a href="usage.html">usage</a> ·
+        <a href="https://github.com/ljh-sh/fio">ljh-sh/fio on GitHub</a>
+    </p>
+</footer>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Security — fio</title>
+<meta name="description" content="How to report vulnerabilities; trust model; tracked CVEs.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="wrap">
+
+<a href="#main" class="skip">Skip to content</a>
+
+<header class="page-header">
+    <nav class="section-nav"><a href="index.html">↑ home</a> · <a href="install.html">install</a> · <a href="tldr.html">tldr</a> · <a href="usage.html">usage</a> · <strong>security</strong> · <a href="audit.html">audit</a> · <a href="build-audit.html">build-audit</a></nav>
+</header>
+
+<section class="hero">
+    <h1>Security</h1>
+    <p class="tagline">Where to report issues, what we track, and our trust model.</p>
+</section>
+
+<section id="report">
+    <h2>Reporting vulnerabilities</h2>
+    <p>fio is a 20+ year mature C codebase maintained by
+    <b>Jens Axboe</b> (Linux kernel block layer maintainer). The canonical
+    project lives at <a href="https://github.com/axboe/fio">github.com/axboe/fio</a>;
+    that's where fio is developed, audited, and bug-fixed.</p>
+
+    <p>This repository (<code>ljh-sh/fio</code>) is <b>only a static-build
+    distribution</b>. We don't maintain fio; we just compile it as fully
+    self-contained static binaries.</p>
+
+    <p><b>Please report security issues upstream first:</b></p>
+    <ul>
+        <li><a href="https://github.com/axboe/fio/issues/new">github.com/axboe/fio/issues</a></li>
+        <li>or email upstream maintainers (see <code>upstream/fio/REPORTING-BUGS</code>)</li>
+    </ul>
+
+    <p>If the issue requires coordinated disclosure that the upstream
+    maintainers cannot provide, open a private GitHub Security Advisory on
+    <a href="https://github.com/ljh-sh/fio/security/advisories/new">github.com/ljh-sh/fio/security</a>
+    &mdash; but expect us to forward it upstream first.</p>
+</section>
+
+<section id="trust">
+    <h2>Trust model</h2>
+    <div class="callout">
+        <p>We treat the upstream axboe/fio commit as the trusted artifact
+        and pin the vendored tree to it (<code>fio-3.41</code> → commit
+        <code>ed675d3</code>).</p>
+        <p>Our build scripts do <b>not</b> modify the vendored source; the
+        only outputs are configure artifacts (<code>config-host.mak</code>,
+        <code>config-host.h</code>, <code>FIO-VERSION-FILE</code>) inside
+        <code>upstream/fio/</code>, which are regenerated on every
+        <code>make distclean</code> and have no bearing on the vendored
+        source itself.</p>
+    </div>
+</section>
+
+<section id="integrity">
+    <h2>Build determinism + integrity</h2>
+    <p>Every release archive ships a sibling <code>*.sha256</code> file with a single
+    hash entry. The combined <code>SHA256SUMS</code> aggregates per-archive hashes.</p>
+
+    <p>For a stronger check, you can:</p>
+    <ol>
+        <li>Verify the archive's <code>.sha256</code>:
+            <pre><code>$ sha256sum -c fio-x86_64-linux-musl.tar.gz.sha256
+fio-x86_64-linux-musl.tar.gz: OK</code></pre>
+        </li>
+        <li>Verify <code>SHA256SUMS</code> is published as a release asset
+            (signed by GitHub's release attestation).</li>
+        <li>(Most authoritative) Reproduce the build locally:
+            <pre><code>git clone https://github.com/ljh-sh/fio.git
+cd fio
+git checkout v0.1.0
+bash scripts/build.sh         # builds into upstream/fio/fio
+# Compare against your downloaded bin/fio via cmp(1) after gunzip'ing
+# the archive. Same toolchain major version produces byte-identical output.</code></pre>
+        </li>
+    </ol>
+</section>
+
+<section id="caveats">
+    <h2>Caveats</h2>
+    <ul>
+        <li><b>Operator-owned filenames.</b> fio does NOT sandbox
+        <code>--filename=</code>; the operator must vet job files from
+        untrusted sources. <b>Never run <code>fio &lt;untrusted-job&gt;</code> as
+        root.</b></li>
+        <li><b>Self-contained ≠ sandboxed.</b> The static binary has the
+        full set of syscalls available to its UID. It just doesn't link
+        against dynamic libraries, which doesn't constrain what syscalls
+        it can make.</li>
+    </ul>
+</section>
+
+<section id="audit">
+    <h2>Per-release audit</h2>
+    <p>See <a href="audit.html">audit.html</a> for the source-level
+    audit that landed with each tagged release.</p>
+</section>
+
+<footer>
+    <p>
+        <a href="index.html">↑ home</a> ·
+        <a href="install.html">install</a> ·
+        <a href="tldr.html">tldr</a> ·
+        <a href="https://github.com/ljh-sh/fio">ljh-sh/fio on GitHub</a>
+    </p>
+</footer>
+
+</main>
+
+</body>
+</html>

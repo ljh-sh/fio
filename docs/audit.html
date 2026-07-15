@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audit — fio</title>
+<meta name="description" content="Source-level security audit for ljh-sh/fio v0.1.0.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="wrap">
+
+<a href="#main" class="skip">Skip to content</a>
+
+<header class="page-header">
+    <nav class="section-nav"><a href="index.html">↑ home</a> · <a href="install.html">install</a> · <a href="tldr.html">tldr</a> · <a href="usage.html">usage</a> · <a href="security.html">security</a> · <strong>audit</strong> · <a href="build-audit.html">build-audit</a></nav>
+</header>
+
+<section class="hero">
+    <h1>Audit — v0.1.0</h1>
+    <p class="tagline">Source-level audit for the first tagged release.
+    Vendor: <a href="https://github.com/axboe/fio">axboe/fio</a> @
+    <code>fio-3.41</code> (commit <code>ed675d3</code>, March 2025).</p>
+    <p class="meta">Date: 2026-07-15 &middot; Auditor: Li Junhao (ljh-sh)</p>
+</section>
+
+<section id="scale">
+    <h2>Severity scale</h2>
+    <table>
+        <thead><tr><th>Level</th><th>Definition</th></tr></thead>
+        <tbody>
+            <tr><td><b>HIGH</b></td><td>Local root / RCE / data loss reachable from default config without auth</td></tr>
+            <tr><td><b>MEDIUM</b></td><td>Requires local user OR untrusted input; bounded blast radius</td></tr>
+            <tr><td><b>LOW</b></td><td>Hardening / hardening-adjacent; no realistic exploit</td></tr>
+            <tr><td><b>INFO</b></td><td>Documented trade-off, vendor stance, or positive finding</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section id="integrity">
+    <h2>Vendor integrity</h2>
+    <p>The vendored tree at <code>upstream/fio/</code> is a byte-for-byte copy of
+    <a href="https://github.com/axboe/fio">axboe/fio</a> @ tag <code>fio-3.41</code>
+    (commit <code>ed675d3</code>), verified by:</p>
+
+<pre><code>$ git subtree add --prefix=upstream/fio axboe-fio fio-3.41 --squash
+Added dir 'upstream/fio'    # 153 files, 12 MB</code></pre>
+
+    <p>To re-verify against upstream HEAD on a fresh checkout:</p>
+<pre><code>cd ljh-sh/fio
+git remote add axboe-fio https://github.com/axboe/fio.git    # if not present
+git fetch --depth=1 axboe-fio tag fio-3.41
+diff -rq upstream/fio &lt;(git archive axboe-fio/fio-3.41 | tar -x -C /tmp/ref)
+# (silence = byte-for-byte match)</code></pre>
+</section>
+
+<section id="findings">
+    <h2>Findings</h2>
+    <p>Severity is per the table above. See the
+    <a href="https://github.com/ljh-sh/fio/blob/main/AUDIT-2026-07-15.md">raw AUDIT file</a>
+    in the source repo for the full audit with rationale.</p>
+
+    <table>
+        <thead><tr><th>#</th><th>Level</th><th>Finding</th></tr></thead>
+        <tbody>
+            <tr><td>#1</td><td>INFO</td><td>Vendor stability (Jens Axboe, 20+ years, kernel maintainer)</td></tr>
+            <tr><td>#2</td><td>INFO</td><td>Self-contained static binaries (zero system library surface)</td></tr>
+            <tr><td>#3</td><td>INFO</td><td><code>--build-static</code> rule carve-out (fio's configure has no <code>--disable-shared</code>)</td></tr>
+            <tr><td>#4</td><td>INFO</td><td><code>--disable-shm</code> (we set this)</td></tr>
+            <tr><td>#5</td><td>INFO</td><td>12 optional engines disabled (libaio, libpmem, librbd, etc.)</td></tr>
+            <tr><td>#6</td><td>LOW</td><td><code>--output</code> path is operator-chosen, no canonicalization</td></tr>
+            <tr><td>#7</td><td>LOW</td><td>Job files can reference any filesystem path the operator has</td></tr>
+            <tr><td>#8</td><td>INFO</td><td><code>posixaio</code> needs <code>-lrt</code> on glibc&lt;2.34 (no impact on our musl build)</td></tr>
+            <tr><td>#9</td><td>INFO</td><td>Build determinism caveat (same toolchain major = byte-identical)</td></tr>
+            <tr><td>#10</td><td>INFO</td><td>Engine registration via ELF constructors (relies on vendored source trust)</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout">
+        <p><b>Summary.</b></p>
+        <ul>
+            <li><b>0 HIGH</b> findings for our build/packaging layer.</li>
+            <li><b>0 MEDIUM</b> findings for our build/packaging layer.</li>
+            <li><b>2 LOW</b> findings (#6, #7) — both standard benchmark-tool caveats documented for operator awareness.</li>
+            <li><b>8 INFO</b> findings — vendor stability + carve-outs + design trade-offs documented above.</li>
+        </ul>
+        <p>This audit covers the <b>wrapper layer</b> (<code>scripts/</code>,
+        <code>.github/</code>, docs, NOTICE, LICENSE) and the
+        <b>static-build configuration</b>. It does <b>not</b> re-audit
+        fio itself — that's the upstream maintainers' job, and we
+        inherit their security posture by pinning <code>fio-3.41</code>
+        and refusing to modify the vendored source.</p>
+    </div>
+</section>
+
+<section id="history">
+    <h2>Audit history</h2>
+    <table>
+        <thead><tr><th>Date</th><th>Release</th><th>Vendored commit</th><th>HIGH</th><th>MEDIUM</th><th>LOW</th><th>INFO</th></tr></thead>
+        <tbody>
+            <tr><td>2026-07-15</td><td><code>v0.1.0</code></td><td><code>ed675d3</code> (fio-3.41)</td><td>0</td><td>0</td><td>2</td><td>8</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<footer>
+    <p>
+        <a href="index.html">↑ home</a> ·
+        <a href="security.html">security</a> ·
+        <a href="https://github.com/ljh-sh/fio/blob/main/AUDIT-2026-07-15.md">raw AUDIT on GitHub</a>
+    </p>
+</footer>
+
+</main>
+
+</body>
+</html>

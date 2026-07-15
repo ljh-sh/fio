@@ -1,0 +1,20 @@
+# shell scripts MUST be LF, not CRLF — bash on Alpine / Windows runners
+# otherwise chokes on \r\n
+*.sh      text eol=lf
+*.bash    text eol=lf
+*.ps1     text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.md      text eol=lf
+*.html    text eol=lf
+*.css     text eol=lf
+
+# Vendored upstream/fio: keep as-is (whatever upstream committed)
+upstream/**           -text
+
+# Don't touch GitHub Pages files (we want exact bytes)
+docs/**               -text
+
+# LICENSE + NOTICE — keep LF
+LICENSE    text eol=lf
+NOTICE*    text eol=lf
