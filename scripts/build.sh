@@ -114,13 +114,17 @@ if [ "$TARGET_ARCH" != "$HOST_ARCH" ] || [ -n "$CROSS_COMPILE" ] || [ -n "${FIO_
 	case "${FIO_OS_HINT:-}" in
 	darwin)
 		# Apple SDK is shared between arches; clang auto-discovers via xcrun.
+		# `clang -arch $arch` propagates to the linker, so we don't need a
+		# separate LDFLAGS (and fio's configure has no --extra-ldflags anyway).
 		CONFIGURE_ARGS="$CONFIGURE_ARGS --extra-cflags=-arch $TARGET_ARCH"
-		CONFIGURE_ARGS="$CONFIGURE_ARGS --extra-ldflags=-arch $TARGET_ARCH"
 		;;
 	windows)
 		# MinGW cross-toolchain (e.g. x86_64-w64-mingw32-gcc from MSYS2).
-		CONFIGURE_ARGS="$CONFIGURE_ARGS --extra-cflags=-static"
-		CONFIGURE_ARGS="$CONFIGURE_ARGS --extra-ldflags=-static"
+		# fio's configure CYGWIN/WIN32 branch auto-sets build_static=yes,
+		# so the binary links statically without us passing -static.
+		# (fio's configure has no --extra-ldflags option.)
+		: "${CFLAGS:=-static}"
+		export CFLAGS
 		;;
 	*)
 		# Linux cross-compile — let the cross-toolchain default to its
