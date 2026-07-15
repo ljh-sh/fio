@@ -140,6 +140,16 @@ if [ "$HOST_OS" = "Linux" ] && [ -z "${FIO_OS_HINT:-}" ]; then
 	CONFIGURE_ARGS="$CONFIGURE_ARGS --build-static"
 fi
 
+# fio's oslib/linux-blkzoned.c uses FALLOC_FL_ZERO_RANGE without
+# #include <linux/falloc.h> — glibc happens to pull it in transitively
+# (e.g. via <sys/ioctl.h>), but musl does not. Set CFLAGS in the env so
+# fio's configure preserves it (configure line 47 prepends to $CFLAGS).
+# (Idempotent on glibc, no-op there.)
+if [ "$HOST_OS" = "Linux" ] && [ -z "${FIO_OS_HINT:-}" ]; then
+	: "${CFLAGS:=-include linux/falloc.h}"
+	export CFLAGS
+fi
+
 [ -n "${FIO_EXTRA_CONFIGURE_ARGS:-}" ] && CONFIGURE_ARGS="$CONFIGURE_ARGS $FIO_EXTRA_CONFIGURE_ARGS"
 
 echo "==> configure out-of-tree (build=$BUILD_DIR, srcdir=$SRC)"
