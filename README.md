@@ -127,4 +127,4 @@ wrapper layer (`scripts/`, `.github/`, `README.md`, `NOTICE.md`,
   upstream `fio-3.41`. See [`AUDIT-2026-07-15.md`](AUDIT-2026-07-15.md)
   for the source-level audit that landed with this release.
 
-See <https://ljh-sh.github.io/fio> for the rendered Pages site.
+See <https://fio.ljh.sh> for the rendered Pages site.

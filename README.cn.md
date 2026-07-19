@@ -119,4 +119,4 @@ docker run --rm --platform linux/amd64 -v "$PWD":/w -w /w alpine:3.20 \
   `fio-3.41`。发布同时落地的源码级审计见
   [`AUDIT-2026-07-15.md`](AUDIT-2026-07-15.md)。
 
-渲染后的 Pages 站点: <https://ljh-sh.github.io/fio>
+渲染后的 Pages 站点: <https://fio.ljh.sh>
