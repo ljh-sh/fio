@@ -1,28 +1,12 @@
-# Jekyll config for ljh-sh.github.io/fio (Pages source = /docs).
-#
-# We deliberately don't use a heavy theme — the site is hand-rolled HTML
-# that already has its own styles.css + nav + nav-footer. We just need
-# GitHub Pages to serve docs/ as a flat static site.
-#
-# Theme: minimal (built-in Pages theme; no JS tracking, no remote CSS).
-# Markdown: keep raw — pages are all raw HTML for full control.
-# Plugins: none (no jekyll-feed, no jekyll-seo-tag — they're not needed
-# and they pull in third-party JS).
+title: fio
+description: axboe/fio 的静态构建 (跨平台单二进制, I/O 性能测试工具)
+repo: fio
+baseurl: ""
+url: "https://fio.ljh.sh"
+theme: ~
 
-title: ljh-sh/fio
-description: Self-contained multi-platform static builds of axboe/fio.
-theme: jekyll-theme-minimal
+permalink: pretty
 markdown: kramdown
-permalink: /:title.html
-
-# Don't apply Jekyll's smarts to our raw HTML — leave everything as-is.
-defaults:
-  - scope:
-      path: ""          # all files
-    values:
-      layout: null      # no Jekyll layout wrapping
-      seo_tag: null
-
-# We never want third-party assets leaking through. Pages-rendered output
-# should only reference same-origin URLs.
-safe: true
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
